@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::{self, BufRead};
 
 const BLOCK_SIZE: usize = 25;
