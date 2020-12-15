@@ -1,5 +1,6 @@
-use std::io::{self, BufRead};
+use std::collections::HashMap;
 use std::error::Error;
+use std::io::{self, BufRead};
 use std::str::FromStr;
 
 #[macro_use] extern crate lazy_static;
@@ -7,23 +8,15 @@ use regex::Regex;
 
 #[derive(Clone, Copy, Debug)]
 struct Mask {
-    and: u64,
-    or: u64,
-}
-
-impl Mask {
-    fn from(and: u64, or: u64) -> Mask {
-        Mask {
-            and,
-            or,
-        }
-    }
+    pub bypass: u64,
+    pub floating: u64,
+    pub ones: u64,
 }
 
 #[derive(Clone, Copy, Debug)]
 enum Instruction {
     SetMask(Mask),
-    SetValue{ address: usize, value: u64 },
+    SetValue{ address: u64, value: u128 },
 }
 
 impl FromStr for Instruction {
@@ -36,10 +29,11 @@ impl FromStr for Instruction {
         }
 
         match (MASK_RE.captures(s), MEM_RE.captures(s)) {
-            (Some(mask_captures), None) => Ok(Self::SetMask(Mask::from(
-                u64::from_str_radix(&mask_captures[1].replace("X", "1"), 2)?,
-                u64::from_str_radix(&mask_captures[1].replace("X", "0"), 2)?,
-            ))),
+            (Some(mask_captures), None) => Ok(Self::SetMask(Mask {
+                bypass: u64::from_str_radix(&mask_captures[1].replace("1", "X").replace("0", "1").replace("X", "0"), 2)?,
+                floating: u64::from_str_radix(&mask_captures[1].replace("1", "0").replace("X", "1"), 2)?,
+                ones: u64::from_str_radix(&mask_captures[1].replace("X", "0"), 2)?,
+            })),
             (None, Some(mem_re)) => Ok(Self::SetValue {
                 address: mem_re[1].parse()?,
                 value: mem_re[2].parse()?,
@@ -51,26 +45,39 @@ impl FromStr for Instruction {
 
 struct ProgramState {
     mask: Mask,
-    memory: Vec<u64>,
+    memory: HashMap<u64, u128>,
 }
 
 impl ProgramState {
     pub fn new() -> ProgramState {
         ProgramState {
-            mask: Mask::from(!0, 0),
-            memory: vec![0; 1 << 16],
+            mask: Mask {
+                bypass: !0,
+                floating: 0,
+                ones: 0,
+            },
+            memory: HashMap::new(),
         }
     }
 
     pub fn apply_instruction(&mut self, instruction: Instruction) -> () {
         match instruction {
             Instruction::SetMask(mask) => self.mask = mask,
-            Instruction::SetValue{ address, value } => self.memory[address] = (value | self.mask.or) & self.mask.and,
+            Instruction::SetValue{ address, value } => {
+                let address_min = (address & self.mask.bypass) | self.mask.ones;
+                let address_max = address_min | self.mask.floating;
+                for i in address_min..=address_max { // insanely slow, could be optimized, but I'm lazy :(
+                    if (i & address_min) == address_min && (i & address_max) == i {
+                        self.memory.insert(i, value);
+                        println!("Inserting {} into {}", value, i);
+                    }
+                }
+            }
         }
     }
 
-    pub fn get_sum(&self) -> u64 {
-        self.memory.iter().sum()
+    pub fn get_sum(&self) -> u128 {
+        self.memory.values().sum()
     }
 }
 
@@ -83,6 +90,7 @@ fn main() {
     let mut program_state = ProgramState::new();
     for instruction in instructions {
         program_state.apply_instruction(instruction);
+        println!("Processed instruction");
     }
 
     println!("{}", program_state.get_sum());
