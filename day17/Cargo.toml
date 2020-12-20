@@ -1,0 +1,13 @@
+[package]
+name = "day17"
+version = "0.1.0"
+authors = ["inga-lovinde <52715130+inga-lovinde@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+enum-map = "0.6.4"
+ndarray = "0.14.0"
+strum = "0.20.0"
+strum_macros = "0.20.1"
