@@ -6,7 +6,7 @@ fn get_number_of_trees(right: usize, down: usize, board: &[Vec<char>]) -> usize 
     let mut trees = 0;
     while x < board.len() {
         let line = &board[x];
-        if (line[y] == '#') {
+        if line[y] == '#' {
             trees = trees + 1;
         }
 

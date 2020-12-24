@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::ops::{Index, IndexMut};
 use ndarray::Array3;
 
@@ -17,13 +16,6 @@ impl CellLocation {
             x,
             y,
             z,
-        }
-    }
-
-    fn new_option(x_option: Option<usize>, y_option: Option<usize>, z_option: Option<usize>) -> Option<Self> {
-        match (x_option, y_option, z_option) {
-            (Some(x), Some(y), Some(z)) => Some(Self::new(x, y, z)),
-            _ => None,
         }
     }
 }
